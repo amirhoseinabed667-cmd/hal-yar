@@ -1,0 +1,315 @@
+/* ================================
+   حل‌یار — طراحی اصلی برنامه
+   ================================ */
+
+:root {
+  --bg: #eef3f0;
+  --card: #ffffff;
+  --primary: #315b4d;
+  --primary-dark: #24483d;
+  --secondary: #dfe9e4;
+  --border: #c9d8d1;
+  --text: #1e2a26;
+  --muted: #687873;
+  --success: #2f7658;
+  --shadow: 0 8px 24px rgba(31, 57, 48, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Tahoma, Arial, sans-serif;
+  line-height: 1.7;
+}
+
+button,
+textarea {
+  font: inherit;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* هدر */
+
+.app-header {
+  background: linear-gradient(145deg, #315b4d, #3f685a);
+  color: white;
+  padding: 28px 18px 30px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(34, 66, 55, 0.18);
+}
+
+.app-title {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.app-subtitle {
+  margin-top: 4px;
+  font-size: 14px;
+  opacity: 0.88;
+}
+
+/* محتوای اصلی */
+
+.container {
+  width: min(680px, calc(100% - 24px));
+  margin: 18px auto 30px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  color: var(--primary-dark);
+}
+
+.description {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ورودی */
+
+textarea {
+  width: 100%;
+  min-height: 125px;
+  resize: vertical;
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  background: #f9fbfa;
+  color: var(--text);
+  padding: 15px;
+  font-size: 18px;
+  direction: ltr;
+  text-align: left;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+textarea::placeholder {
+  color: #9aa9a3;
+}
+
+textarea:focus {
+  border-color: #5d8b7a;
+  box-shadow: 0 0 0 4px rgba(93, 139, 122, 0.13);
+}
+
+/* دکمه‌ها */
+
+.main-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 13px;
+}
+
+.main-buttons button {
+  flex: 1;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+  transition: transform 0.12s, opacity 0.12s, background 0.2s;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+.primary-button,
+.secondary-button {
+  min-height: 50px;
+  border-radius: 13px;
+  font-weight: 700;
+}
+
+.primary-button {
+  background: var(--primary);
+  color: white;
+}
+
+.primary-button:hover {
+  background: var(--primary-dark);
+}
+
+.secondary-button {
+  background: var(--secondary);
+  color: var(--primary-dark);
+}
+
+/* روش‌های ورود */
+
+.input-methods {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+}
+
+.method-button {
+  min-height: 50px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #f7faf8;
+  color: #42534d;
+  font-size: 14px;
+}
+
+.method-button.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+/* نتیجه */
+
+.result-card {
+  border-top: 4px solid var(--primary);
+}
+
+.answer {
+  min-height: 58px;
+  margin-top: 12px;
+  padding: 13px;
+  border-radius: 12px;
+  background: #f1f6f3;
+  color: var(--primary-dark);
+  font-size: 23px;
+  font-weight: 800;
+  direction: ltr;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.steps {
+  background: #f8faf9;
+  border: 1px solid #dbe5e0;
+  border-radius: 13px;
+  padding: 14px;
+  min-height: 75px;
+}
+
+.empty-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.check-result {
+  padding: 13px;
+  border-radius: 12px;
+  background: #f1f6f3;
+  color: var(--muted);
+}
+
+/* امکانات */
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.feature-item {
+  min-height: 92px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #f8faf9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.feature-item span {
+  font-size: 27px;
+  line-height: 1;
+}
+
+.feature-item p {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #53645e;
+}
+
+/* پایین برنامه */
+
+.app-footer {
+  padding: 8px 20px 28px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* موبایل */
+
+@media (max-width: 520px) {
+  .app-header {
+    padding-top: 23px;
+    padding-bottom: 25px;
+  }
+
+  .app-title {
+    font-size: 27px;
+  }
+
+  .container {
+    width: min(100% - 16px, 680px);
+    margin-top: 10px;
+  }
+
+  .card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+
+  .card h2 {
+    font-size: 18px;
+  }
+
+  textarea {
+    min-height: 115px;
+    font-size: 17px;
+  }
+
+  .input-methods {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 360px) {
+  .main-buttons {
+    flex-direction: column;
+  }
+}
