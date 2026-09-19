@@ -410,19 +410,21 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
             html +=
-                "<div dir='ltr' class='step-line'>" +
-                polynomialText(left) +
-                " → " +
-                leftX +
-                "</div>";
+    "<div dir='ltr' class='step-line'>" +
+    leftX +
+    " = " +
+    numberText(right[0] || 0) +
+    (leftConstant > 0 ? " - " : " + ") +
+    numberText(amount) +
+    "</div>";
 
 
-            html +=
-                "<div dir='ltr' class='step-line'>" +
-                leftX +
-                " = " +
-                rightText +
-                "</div>";
+html +=
+    "<div dir='ltr' class='step-line'>" +
+    leftX +
+    " = " +
+    rightText +
+    "</div>";
 
         }
         else {
