@@ -1,7 +1,7 @@
 document.addEventListener("DOMContentLoaded", function () {
 
     // =========================
-    // عناصر صفحه
+    // گرفتن عناصر صفحه
     // =========================
 
     const equationInput = document.getElementById("equationInput");
@@ -18,46 +18,98 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =========================
-    // تبدیل اعداد فارسی و عربی
+    // تبدیل اعداد فارسی به انگلیسی
     // =========================
 
     function normalizeNumbers(text) {
+        if (!text) return "";
 
-        const fa = "۰۱۲۳۴۵۶۷۸۹";
-        const ar = "٠١٢٣٤٥٦٧٨٩";
+        const persianNumbers = "۰۱۲۳۴۵۶۷۸۹";
+        const arabicNumbers = "٠١٢٣٤٥٦٧٨٩";
 
-        return String(text)
+        return text
             .replace(/[۰-۹]/g, function (char) {
-                return fa.indexOf(char);
+                return persianNumbers.indexOf(char);
             })
             .replace(/[٠-٩]/g, function (char) {
-                return ar.indexOf(char);
+                return arabicNumbers.indexOf(char);
             })
+            .replace(/٫/g, ".")
+            .replace(/،/g, ",")
             .replace(/×/g, "*")
-            .replace(/÷/g, "/")
             .replace(/−/g, "-")
-            .replace(/\s+/g, "");
+            .replace(/÷/g, "/");
     }
 
 
     // =========================
-    // نمایش عدد
+    // فرمت نمایش عدد
     // =========================
 
-    function formatNumber(number) {
+    function formatNumber(num) {
+        if (!Number.isFinite(num)) return String(num);
 
-        if (Math.abs(number) < 0.0000000001) {
+        if (Math.abs(num) < 0.0000000001) {
+            num = 0;
+        }
+
+        if (Number.isInteger(num)) {
+            return String(num);
+        }
+
+        return Number(num.toFixed(10)).toString();
+    }
+
+
+    // =========================
+    // تبدیل عبارت‌های ساده به متن
+    // =========================
+
+    function xTerm(coefficient) {
+
+        if (coefficient === 0) {
             return "0";
         }
 
-        if (
-            Math.abs(number - Math.round(number)) <
-            0.0000000001
-        ) {
-            return String(Math.round(number));
+        if (coefficient === 1) {
+            return "x";
         }
 
-        return String(Number(number.toFixed(10)));
+        if (coefficient === -1) {
+            return "-x";
+        }
+
+        return formatNumber(coefficient) + "x";
+    }
+
+
+    function equationText(a, b, c) {
+
+        let left = "";
+
+        if (a !== 0) {
+            left += xTerm(a);
+        }
+
+        if (b !== 0) {
+
+            if (left !== "") {
+                if (b > 0) {
+                    left += " + " + formatNumber(b);
+                } else {
+                    left += " - " + formatNumber(Math.abs(b));
+                }
+            } else {
+                left = formatNumber(b);
+            }
+
+        }
+
+        if (left === "") {
+            left = "0";
+        }
+
+        return left + " = " + formatNumber(c);
     }
 
 
@@ -67,44 +119,47 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function splitTerms(expression) {
 
-        expression =
-            String(expression).replace(/\s+/g, "");
+        expression = expression
+            .replace(/\s+/g, "")
+            .replace(/\*/g, "");
 
-        if (!expression) {
+        if (expression === "") {
             return [];
         }
 
-        const terms = [];
-        let start = 0;
+        if (expression[0] !== "+" && expression[0] !== "-") {
+            expression = "+" + expression;
+        }
 
-        for (
-            let i = 1;
-            i < expression.length;
-            i++
-        ) {
+        const terms = [];
+        let current = "";
+
+        for (let i = 0; i < expression.length; i++) {
+
+            const char = expression[i];
 
             if (
-                (expression[i] === "+" ||
-                 expression[i] === "-") &&
-                expression[i - 1] !== "e" &&
-                expression[i - 1] !== "E"
+                (char === "+" || char === "-") &&
+                i !== 0
             ) {
 
-                terms.push(
-                    expression.slice(start, i)
-                );
+                if (current !== "") {
+                    terms.push(current);
+                }
 
-                start = i;
+                current = char;
+
+            } else {
+
+                current += char;
             }
         }
 
-        terms.push(
-            expression.slice(start)
-        );
+        if (current !== "") {
+            terms.push(current);
+        }
 
-        return terms.filter(function (term) {
-            return term !== "";
-        });
+        return terms;
     }
 
 
@@ -114,91 +169,30 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function multiplyTerm(term, factor) {
 
-        term =
-            term.replace(/\s+/g, "");
-
+        term = term.replace(/\s+/g, "");
 
         // x
-
         if (term === "x") {
-
-            if (factor === 1) {
-                return "x";
-            }
-
-            if (factor === -1) {
-                return "-x";
-            }
-
-            return (
-                formatNumber(factor) +
-                "x"
-            );
+            return xTerm(factor);
         }
-
 
         // -x
-
         if (term === "-x") {
-
-            if (factor === 1) {
-                return "-x";
-            }
-
-            if (factor === -1) {
-                return "x";
-            }
-
-            return (
-                formatNumber(-factor) +
-                "x"
-            );
+            return xTerm(-factor);
         }
 
+        // عدد x
+        let xMatch = term.match(/^([+-]?\d*\.?\d+)x$/);
 
-        // عدد ضربدر x
-
-        let match =
-            term.match(
-                /^([+-]?\d*\.?\d+)x$/i
-            );
-
-
-        if (match) {
-
-            const coefficient =
-                Number(match[1]);
-
-            const result =
-                coefficient * factor;
-
-
-            if (result === 1) {
-                return "x";
-            }
-
-            if (result === -1) {
-                return "-x";
-            }
-
-            return (
-                formatNumber(result) +
-                "x"
-            );
+        if (xMatch) {
+            const coefficient = Number(xMatch[1]);
+            return xTerm(coefficient * factor);
         }
 
-
-        // عدد
-
-        if (
-            /^[+-]?\d*\.?\d+$/.test(term)
-        ) {
-
-            return formatNumber(
-                Number(term) * factor
-            );
+        // عدد ثابت
+        if (/^[+-]?\d*\.?\d+$/.test(term)) {
+            return formatNumber(Number(term) * factor);
         }
-
 
         return null;
     }
@@ -210,331 +204,247 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function expandParentheses(expression) {
 
-        expression =
-            normalizeNumbers(expression);
+        expression = expression
+            .replace(/\s+/g, "")
+            .replace(/\*/g, "");
 
         let safety = 0;
 
-
-        while (expression.includes("(")) {
+        while (expression.includes("(") && safety < 50) {
 
             safety++;
 
-
-            // جلوگیری از حلقه بی‌نهایت
-
-            if (safety > 30) {
-
-                return {
-                    ok: false,
-                    error:
-                        "ساختار پرانتزها قابل پردازش نیست."
-                };
-            }
-
-
-            const closeIndex =
-                expression.indexOf(")");
-
+            const closeIndex = expression.indexOf(")");
 
             if (closeIndex === -1) {
-
-                return {
-                    ok: false,
-                    error:
-                        "یک پرانتز بسته نشده است."
-                };
+                break;
             }
 
-
-            const openIndex =
-                expression.lastIndexOf(
-                    "(",
-                    closeIndex
-                );
-
+            const openIndex = expression.lastIndexOf("(", closeIndex);
 
             if (openIndex === -1) {
-
-                return {
-                    ok: false,
-                    error:
-                        "ساختار پرانتزها درست نیست."
-                };
+                break;
             }
 
+            const inside = expression.substring(
+                openIndex + 1,
+                closeIndex
+            );
 
-            const inside =
-                expression.slice(
-                    openIndex + 1,
-                    closeIndex
-                );
+            const before = expression.substring(0, openIndex);
 
-
-            if (!inside) {
-
-                return {
-                    ok: false,
-                    error:
-                        "پرانتز خالی است."
-                };
-            }
-
-
-            const before =
-                expression.slice(
-                    0,
-                    openIndex
-                );
-
-
-            const after =
-                expression.slice(
-                    closeIndex + 1
-                );
-
+            const after = expression.substring(closeIndex + 1);
 
             let factor = 1;
+            let factorText = "";
 
-            let factorStart =
-                before.length;
+            // چیزی که بلافاصله قبل پرانتز قرار دارد
+            const match = before.match(/([+-]?\d*\.?\d+)$/);
 
+            if (match) {
 
-            // 3(x+4)
-            // -2(x+4)
-            // 12(x+4)
+                factorText = match[1];
 
-            const numberMatch =
-                before.match(
-                    /([+-]?\d*\.?\d+)$/
+                factor = Number(factorText);
+
+                const newBefore = before.substring(
+                    0,
+                    before.length - factorText.length
                 );
 
+                const terms = splitTerms(inside);
 
-            if (numberMatch) {
+                const multiplied = terms
+                    .map(term => multiplyTerm(term, factor))
+                    .filter(term => term !== null);
 
-                factor =
-                    Number(numberMatch[1]);
+                if (multiplied.length === 0) {
+                    return null;
+                }
 
-                factorStart =
-                    before.length -
-                    numberMatch[1].length;
+                expression =
+                    newBefore +
+                    multiplied.join("") +
+                    after;
+
+                continue;
             }
 
-
-            // -(x+4)
-
-            else if (
-                before.endsWith("-")
-            ) {
+            // اگر مستقیماً - قبل پرانتز باشد
+            if (before.endsWith("-")) {
 
                 factor = -1;
 
-                factorStart =
-                    before.length;
+                const newBefore = before.substring(
+                    0,
+                    before.length - 1
+                );
+
+                const terms = splitTerms(inside);
+
+                const multiplied = terms
+                    .map(term => multiplyTerm(term, factor))
+                    .filter(term => term !== null);
+
+                if (multiplied.length === 0) {
+                    return null;
+                }
+
+                expression =
+                    newBefore +
+                    multiplied.join("") +
+                    after;
+
+                continue;
             }
 
-
-            // +(x+4)
-
-            else if (
-                before.endsWith("+")
-            ) {
+            // اگر مستقیماً + قبل پرانتز باشد
+            if (before.endsWith("+")) {
 
                 factor = 1;
 
-                factorStart =
-                    before.length;
-            }
-
-
-            const leftPart =
-                before.slice(
+                const newBefore = before.substring(
                     0,
-                    factorStart
+                    before.length - 1
                 );
 
+                const terms = splitTerms(inside);
 
-            const terms =
-                splitTerms(inside);
+                const multiplied = terms
+                    .map(term => multiplyTerm(term, factor))
+                    .filter(term => term !== null);
 
-
-            const expandedTerms = [];
-
-
-            for (
-                let i = 0;
-                i < terms.length;
-                i++
-            ) {
-
-                const result =
-                    multiplyTerm(
-                        terms[i],
-                        factor
-                    );
-
-
-                if (result === null) {
-
-                    return {
-                        ok: false,
-                        error:
-                            "عبارت داخل پرانتز فعلاً قابل پردازش نیست."
-                    };
+                if (multiplied.length === 0) {
+                    return null;
                 }
 
+                expression =
+                    newBefore +
+                    multiplied.join("") +
+                    after;
 
-                expandedTerms.push(result);
+                continue;
             }
 
+            // پرانتز بدون ضریب
+            const terms = splitTerms(inside);
+
+            const multiplied = terms
+                .map(term => multiplyTerm(term, 1))
+                .filter(term => term !== null);
+
+            if (multiplied.length === 0) {
+                return null;
+            }
 
             expression =
-                leftPart +
-                expandedTerms.join("") +
+                before +
+                multiplied.join("") +
                 after;
         }
 
-
-        if (expression.includes(")")) {
-
-            return {
-                ok: false,
-                error:
-                    "ساختار پرانتزها درست نیست."
-            };
+        if (safety >= 50) {
+            return null;
         }
 
-
-        return {
-            ok: true,
-            expression: expression
-        };
+        return expression;
     }
 
 
     // =========================
     // تجزیه چندجمله‌ای
-    // ax² + bx + c
+    // a x² + b x + c
     // =========================
 
     function parsePolynomial(expression) {
 
-        expression =
-            normalizeNumbers(expression)
-                .replace(/\*/g, "")
-                .replace(/²/g, "^2");
-
-
-        const terms =
-            splitTerms(expression);
-
+        expression = expression
+            .replace(/\s+/g, "")
+            .replace(/\*/g, "");
 
         let a = 0;
         let b = 0;
         let c = 0;
 
+        const terms = splitTerms(expression);
 
-        for (
-            let i = 0;
-            i < terms.length;
-            i++
-        ) {
+        for (let term of terms) {
 
-            const term =
-                terms[i];
+            if (!term) continue;
 
-
+            // =========================
             // x²
+            // =========================
 
-            let match =
-                term.match(
-                    /^([+-]?\d*\.?\d*)x\^2$/i
-                );
+            let x2Match = term.match(
+                /^([+-]?\d*\.?\d*)x\^2$/
+            );
 
+            if (x2Match) {
 
-            if (match) {
-
-                let value =
-                    match[1];
-
+                let coefficient = x2Match[1];
 
                 if (
-                    value === "" ||
-                    value === "+"
+                    coefficient === "" ||
+                    coefficient === "+"
                 ) {
-                    value = 1;
+                    coefficient = 1;
+                } else if (coefficient === "-") {
+                    coefficient = -1;
+                } else {
+                    coefficient = Number(coefficient);
                 }
 
-                else if (
-                    value === "-"
-                ) {
-                    value = -1;
-                }
-
-                else {
-                    value = Number(value);
-                }
-
-
-                a += value;
+                a += coefficient;
 
                 continue;
             }
 
 
+            // =========================
             // x
+            // این قسمت باید قبل از عدد ثابت بررسی شود
+            // =========================
 
-            match =
-                term.match(
-                    /^([+-]?\d*\.?\d*)x$/i
-                );
+            let xMatch = term.match(
+                /^([+-]?\d*\.?\d*)x$/
+            );
 
+            if (xMatch) {
 
-            if (match) {
-
-                let value =
-                    match[1];
-
+                let coefficient = xMatch[1];
 
                 if (
-                    value === "" ||
-                    value === "+"
+                    coefficient === "" ||
+                    coefficient === "+"
                 ) {
-                    value = 1;
+                    coefficient = 1;
+                } else if (coefficient === "-") {
+                    coefficient = -1;
+                } else {
+                    coefficient = Number(coefficient);
                 }
 
-                else if (
-                    value === "-"
-                ) {
-                    value = -1;
-                }
-
-                else {
-                    value = Number(value);
-                }
-
-
-                b += value;
+                b += coefficient;
 
                 continue;
             }
 
 
-            // عدد
+            // =========================
+            // عدد ثابت
+            // =========================
 
-            if (
-                /^[+-]?\d*\.?\d+$/.test(term)
-            ) {
+            if (/^[+-]?\d*\.?\d+$/.test(term)) {
 
                 c += Number(term);
 
                 continue;
             }
 
-
+            // عبارت ناشناخته
             return null;
         }
-
 
         return {
             a: a,
@@ -548,107 +458,59 @@ document.addEventListener("DOMContentLoaded", function () {
     // آماده‌سازی معادله
     // =========================
 
-    function prepareEquation(raw) {
+    function prepareEquation(input) {
 
-        const equation =
-            normalizeNumbers(raw);
+        let equation = normalizeNumbers(input)
+            .replace(/\s+/g, "")
+            .replace(/−/g, "-")
+            .replace(/×/g, "*");
 
-
-        const equalIndex =
-            equation.indexOf("=");
-
-
-        if (equalIndex === -1) {
-
-            return {
-                ok: false,
-                error:
-                    "معادله باید علامت مساوی (=) داشته باشد."
-            };
+        if (!equation.includes("=")) {
+            return null;
         }
 
+        const parts = equation.split("=");
+
+        if (parts.length !== 2) {
+            return null;
+        }
+
+        let left = parts[0];
+        let right = parts[1];
+
+        if (left === "" || right === "") {
+            return null;
+        }
+
+        const originalLeft = left;
+        const originalRight = right;
+
+        const expandedLeft = expandParentheses(left);
+        const expandedRight = expandParentheses(right);
 
         if (
-            equation.indexOf(
-                "=",
-                equalIndex + 1
-            ) !== -1
+            expandedLeft === null ||
+            expandedRight === null
         ) {
-
-            return {
-                ok: false,
-                error:
-                    "معادله باید فقط یک علامت مساوی داشته باشد."
-            };
+            return null;
         }
 
+        const leftPoly = parsePolynomial(expandedLeft);
+        const rightPoly = parsePolynomial(expandedRight);
 
-        const originalLeft =
-            equation.slice(
-                0,
-                equalIndex
-            );
-
-
-        const originalRight =
-            equation.slice(
-                equalIndex + 1
-            );
-
-
-        if (
-            !originalLeft ||
-            !originalRight
-        ) {
-
-            return {
-                ok: false,
-                error:
-                    "هر دو طرف مساوی را کامل وارد کن."
-            };
+        if (!leftPoly || !rightPoly) {
+            return null;
         }
-
-
-        const left =
-            expandParentheses(
-                originalLeft
-            );
-
-
-        if (!left.ok) {
-            return left;
-        }
-
-
-        const right =
-            expandParentheses(
-                originalRight
-            );
-
-
-        if (!right.ok) {
-            return right;
-        }
-
 
         return {
+            originalLeft,
+            originalRight,
 
-            ok: true,
+            expandedLeft,
+            expandedRight,
 
-            originalLeft:
-                originalLeft,
-
-            originalRight:
-                originalRight,
-
-            left:
-                left.expression,
-
-            right:
-                right.expression,
-
-            hadParentheses:
-                equation.includes("(")
+            left: leftPoly,
+            right: rightPoly
         };
     }
 
@@ -657,473 +519,287 @@ document.addEventListener("DOMContentLoaded", function () {
     // حل معادله
     // =========================
 
-    function solveEquation(raw) {
+    function solveEquation(data) {
 
-        const prepared =
-            prepareEquation(raw);
+        const a = data.left.a - data.right.a;
+        const b = data.left.b - data.right.b;
+        const c = data.right.c - data.left.c;
 
+        // معادله خطی
+        if (Math.abs(a) < 0.0000000001) {
 
-        if (!prepared.ok) {
-            return prepared;
-        }
+            if (Math.abs(b) < 0.0000000001) {
 
-
-        const left =
-            parsePolynomial(
-                prepared.left
-            );
-
-
-        const right =
-            parsePolynomial(
-                prepared.right
-            );
-
-
-        if (!left || !right) {
-
-            return {
-                ok: false,
-                error:
-                    "این نوع معادله فعلاً پشتیبانی نمی‌شود."
-            };
-        }
-
-
-        // انتقال همه جمله‌ها به سمت چپ
-
-        const a =
-            left.a - right.a;
-
-        const b =
-            left.b - right.b;
-
-        const c =
-            left.c - right.c;
-
-
-        // معادله درجه اول
-
-        if (
-            Math.abs(a) < 0.0000000001
-        ) {
-
-            if (
-                Math.abs(b) <
-                0.0000000001
-            ) {
-
-                if (
-                    Math.abs(c) <
-                    0.0000000001
-                ) {
-
+                if (Math.abs(c) < 0.0000000001) {
                     return {
-                        ok: true,
-                        type: "infinite",
-                        prepared: prepared
+                        type: "infinite"
                     };
                 }
 
-
                 return {
-                    ok: true,
-                    type: "none",
-                    prepared: prepared
+                    type: "none"
                 };
             }
 
-
             return {
-
-                ok: true,
-
                 type: "linear",
+                a: b,
+                c: c,
+                x: c / b
+            };
+        }
 
-                x:
-                    -c / b,
+        // معادله درجه دوم
+        const discriminant =
+            b * b - 4 * a * (-c);
 
+        if (discriminant < 0) {
+
+            return {
+                type: "quadratic-none",
                 a: a,
                 b: b,
                 c: c,
-
-                prepared:
-                    prepared
+                discriminant: discriminant
             };
         }
 
+        if (Math.abs(discriminant) < 0.0000000001) {
 
-        // درجه دوم
-
-        const delta =
-            b * b -
-            4 * a * c;
-
-
-        if (
-            delta < -0.0000000001
-        ) {
+            const x = -b / (2 * a);
 
             return {
-
-                ok: true,
-
-                type: "complex",
-
-                delta:
-                    delta,
-
-                prepared:
-                    prepared
-            };
-        }
-
-
-        if (
-            Math.abs(delta) <
-            0.0000000001
-        ) {
-
-            return {
-
-                ok: true,
-
-                type: "quadraticOne",
-
-                x:
-                    -b / (2 * a),
-
+                type: "quadratic-one",
                 a: a,
                 b: b,
                 c: c,
-
-                delta: 0,
-
-                prepared:
-                    prepared
+                discriminant: 0,
+                x1: x,
+                x2: x
             };
         }
 
+        const sqrtD = Math.sqrt(discriminant);
 
-        const sqrtDelta =
-            Math.sqrt(delta);
+        const x1 =
+            (-b + sqrtD) / (2 * a);
 
+        const x2 =
+            (-b - sqrtD) / (2 * a);
 
         return {
-
-            ok: true,
-
-            type: "quadratic",
-
-            x1:
-                (-b + sqrtDelta) /
-                (2 * a),
-
-            x2:
-                (-b - sqrtDelta) /
-                (2 * a),
-
+            type: "quadratic-two",
             a: a,
             b: b,
             c: c,
-
-            delta:
-                delta,
-
-            prepared:
-                prepared
+            discriminant: discriminant,
+            x1: x1,
+            x2: x2
         };
     }
 
 
     // =========================
-    // ساخت یک مرحله
+    // اضافه کردن مرحله
     // =========================
 
-    function addStep(title, lines) {
+    function addStep(title, text, equation) {
 
-        const box =
-            document.createElement(
-                "div"
-            );
+        const div = document.createElement("div");
 
-        box.className =
-            "step-box";
+        div.className = "step";
 
+        let html = "";
 
-        const heading =
-            document.createElement(
-                "h3"
-            );
+        if (title) {
+            html += `<h3>${title}</h3>`;
+        }
 
-        heading.textContent =
-            title;
+        if (text) {
+            html += `<p>${text}</p>`;
+        }
 
+        if (equation) {
+            html += `<div class="step-equation">${equation}</div>`;
+        }
 
-        box.appendChild(
-            heading
-        );
+        div.innerHTML = html;
 
-
-        lines.forEach(
-            function (line) {
-
-                const paragraph =
-                    document.createElement(
-                        "p"
-                    );
-
-                paragraph.textContent =
-                    line;
-
-
-                box.appendChild(
-                    paragraph
-                );
-            }
-        );
-
-
-        steps.appendChild(
-            box
-        );
+        steps.appendChild(div);
     }
 
 
     // =========================
-    // مراحل معادله درجه اول
+    // مراحل معادله خطی
     // =========================
 
-    function showLinearSteps(result) {
+    function showLinearSteps(data, result) {
 
-        steps.innerHTML = "";
+        const left = data.left;
+        const right = data.right;
 
+        const original =
+            normalizeNumbers(equationInput.value)
+                .replace(/\s+/g, "");
 
-        const p =
-            result.prepared;
+        const originalParts = original.split("=");
 
+        const originalLeft =
+            originalParts[0] || "";
 
-        let stepNumber = 1;
+        const originalRight =
+            originalParts[1] || "";
 
+        // =========================
+        // مرحله اول
+        // =========================
 
-        // پرانتز
+        let expandedChanged =
+            data.expandedLeft !== originalLeft ||
+            data.expandedRight !== originalRight;
 
-        if (p.hadParentheses) {
+        if (expandedChanged) {
 
             addStep(
-                "مرحله ۱: باز کردن پرانتز",
-                [
-                    p.originalLeft +
-                    " = " +
-                    p.originalRight,
-
-                    "عبارت داخل پرانتز را با ضریب یا علامت بیرون آن پخش می‌کنیم.",
-
-                    p.left +
-                    " = " +
-                    p.right
-                ]
+                "مرحله 1: باز کردن پرانتز",
+                "عبارت داخل پرانتز را باز می‌کنیم و ضریب یا علامت بیرون پرانتز را در تمام عبارت داخل آن پخش می‌کنیم.",
+                data.expandedLeft + " = " + data.expandedRight
             );
 
+        } else {
 
-            stepNumber++;
+            addStep(
+                "مرحله 1: معادله ساده‌شده",
+                "",
+                data.expandedLeft + " = " + data.expandedRight
+            );
         }
 
 
-        const left =
-            parsePolynomial(
-                p.left
+        // =========================
+        // ساخت ضرایب نهایی
+        // =========================
+
+        const a = left.a - right.a;
+        const b = left.b - right.b;
+        const c = right.c - left.c;
+
+
+        // =========================
+        // اگر جمله x در دو طرف باشد
+        // =========================
+
+        if (right.b !== 0 && left.b !== 0) {
+
+            let newLeft;
+
+            if (a === 0) {
+                newLeft = "0";
+            } else {
+                newLeft = xTerm(a);
+            }
+
+            addStep(
+                "مرحله 2: جمع کردن جمله‌های x",
+                "جمله‌های دارای x را در یک طرف مساوی قرار می‌دهیم.",
+                newLeft + " = " + formatNumber(c - b)
             );
-
-
-        const right =
-            parsePolynomial(
-                p.right
-            );
-
-
-        const a =
-            left.a -
-            right.a;
-
-
-        const b =
-            left.b -
-            right.b;
-
-
-        const c =
-            right.c -
-            left.c;
-
-
-        let simplified;
-
-
-        if (
-            Math.abs(b) >
-            0.0000000001
-        ) {
-
-            simplified =
-                (
-                    a === 1
-                        ? "x"
-                        : a === -1
-                            ? "-x"
-                            : formatNumber(a) + "x"
-                )
-
-                +
-
-                (
-                    b > 0
-                        ? " + " +
-                          formatNumber(b)
-                        : " - " +
-                          formatNumber(
-                              Math.abs(b)
-                          )
-                )
-
-                +
-
-                " = " +
-                formatNumber(c);
-
-        }
-
-        else {
-
-            simplified =
-                (
-                    a === 1
-                        ? "x"
-                        : a === -1
-                            ? "-x"
-                            : formatNumber(a) + "x"
-                )
-
-                +
-
-                " = " +
-                formatNumber(c);
         }
 
 
-        addStep(
-            "مرحله " +
-            stepNumber +
-            ": معادله ساده‌شده",
-
-            [
-                p.left +
-                " = " +
-                p.right,
-
-                simplified
-            ]
-        );
-
-
-        stepNumber++;
-
-
+        // =========================
         // انتقال عدد ثابت
+        // =========================
 
-        if (
-            Math.abs(b) >
-            0.0000000001
-        ) {
+        if (Math.abs(b) > 0.0000000001) {
+
+            let number = Math.abs(b);
+
+            let signText =
+                b > 0
+                    ? "مثبت است، علامتش منفی می‌شود."
+                    : "منفی است، علامتش مثبت می‌شود.";
 
             addStep(
-                "مرحله " +
-                stepNumber +
-                ": انتقال عدد ثابت",
+                right.b !== 0 && left.b !== 0
+                    ? "مرحله 3: انتقال عدد ثابت"
+                    : "مرحله 2: انتقال عدد ثابت",
 
-                [
-                    "عدد " +
-                    formatNumber(
-                        Math.abs(b)
-                    ) +
-                    " را به طرف دیگر مساوی می‌بریم؛ چون " +
-                    (
-                        b > 0
-                            ? "مثبت است، علامتش منفی می‌شود."
-                            : "منفی است، علامتش مثبت می‌شود."
-                    ),
+                "عدد " +
+                formatNumber(number) +
+                " را به طرف دیگر مساوی می‌بریم؛ چون " +
+                signText,
 
-                    (
-                        a === 1
-                            ? "x"
-                            : a === -1
-                                ? "-x"
-                                : formatNumber(a) + "x"
-                    )
-
-                    +
-
-                    " = " +
-
-                    formatNumber(
-                        c - b
-                    )
-                ]
+                xTerm(a) +
+                " = " +
+                formatNumber(c)
             );
 
+            // نتیجه بعد از انتقال
+            addStep(
+                "",
+                "",
+                xTerm(a) +
+                " = " +
+                formatNumber(c - b)
+            );
 
-            stepNumber++;
+        } else {
+
+            addStep(
+                right.b !== 0 && left.b !== 0
+                    ? "مرحله 3: ساده‌سازی"
+                    : "مرحله 2: ساده‌سازی",
+
+                "",
+                xTerm(a) +
+                " = " +
+                formatNumber(c)
+            );
         }
 
 
+        // =========================
         // تقسیم بر ضریب x
+        // =========================
+
+        const divisionStep =
+            Math.abs(b) > 0.0000000001
+                ? c - b
+                : c;
+
+        const stepNumber =
+            right.b !== 0 && left.b !== 0
+                ? (Math.abs(b) > 0.0000000001 ? 4 : 3)
+                : (Math.abs(b) > 0.0000000001 ? 3 : 2);
 
         addStep(
-            "مرحله " +
-            stepNumber +
-            ": تقسیم بر ضریب x",
+            "مرحله " + stepNumber + ": تقسیم بر ضریب x",
 
-            [
-                "حالا برای اینکه ضریب " +
-                formatNumber(a) +
-                " کنار x حذف شود و فقط x باقی بماند، دو طرف مساوی را بر " +
-                formatNumber(a) +
-                " تقسیم می‌کنیم.",
+            "حالا برای اینکه ضریب " +
+            formatNumber(a) +
+            " کنار x حذف شود و فقط x باقی بماند، دو طرف مساوی را بر " +
+            formatNumber(a) +
+            " تقسیم می‌کنیم.",
 
-                (
-                    a === 1
-                        ? "x"
-                        : a === -1
-                            ? "-x"
-                            : formatNumber(a) + "x"
-                )
-
-                +
-
-                " ÷ " +
-                formatNumber(a) +
-
-                " = " +
-
-                formatNumber(c - b) +
-
-                " ÷ " +
-
-                formatNumber(a)
-            ]
+            xTerm(a) +
+            " ÷ " +
+            formatNumber(a) +
+            " = " +
+            formatNumber(divisionStep) +
+            " ÷ " +
+            formatNumber(a)
         );
 
 
-        stepNumber++;
-
+        // =========================
+        // جواب نهایی
+        // =========================
 
         addStep(
             "جواب نهایی",
-
-            [
-                "x = " +
-                formatNumber(result.x)
-            ]
+            "",
+            "x = " + formatNumber(result.x)
         );
     }
 
@@ -1132,385 +808,304 @@ document.addEventListener("DOMContentLoaded", function () {
     // مراحل درجه دوم
     // =========================
 
-    function showQuadraticSteps(result) {
+    function showQuadraticSteps(data, result) {
 
-        steps.innerHTML = "";
-
-
-        const p =
-            result.prepared;
-
-
-        let stepNumber = 1;
-
-
-        if (p.hadParentheses) {
-
-            addStep(
-                "مرحله ۱: باز کردن پرانتز",
-
-                [
-                    p.originalLeft +
-                    " = " +
-                    p.originalRight,
-
-                    "پرانتزها را باز می‌کنیم و جمله‌های مشابه را جمع می‌کنیم.",
-
-                    p.left +
-                    " = " +
-                    p.right
-                ]
-            );
-
-
-            stepNumber++;
-        }
-
+        const a = result.a;
+        const b = result.b;
+        const c = result.c;
 
         addStep(
-            "مرحله " +
-            stepNumber +
-            ": محاسبه دلتا",
-
-            [
-                "معادله را به شکل ax² + bx + c = 0 می‌بریم.",
-
-                "Δ = b² - 4ac",
-
-                "Δ = (" +
-                formatNumber(result.b) +
-                ")² - 4(" +
-                formatNumber(result.a) +
-                ")(" +
-                formatNumber(result.c) +
-                ")",
-
-                "Δ = " +
-                formatNumber(result.delta)
-            ]
+            "مرحله 1: معادله ساده‌شده",
+            "",
+            equationText(a, b, -c)
         );
 
+        const delta =
+            b * b - 4 * a * (-c);
 
-        stepNumber++;
+        addStep(
+            "مرحله 2: محاسبه دلتا",
+            "برای حل معادله درجه دوم ابتدا دلتا را حساب می‌کنیم.",
+            "Δ = b² - 4ac = " +
+            formatNumber(delta)
+        );
 
-
-        if (
-            result.type ===
-            "quadraticOne"
-        ) {
-
-            addStep(
-                "مرحله " +
-                stepNumber +
-                ": محاسبه x",
-
-                [
-                    "x = -b ÷ 2a",
-
-                    "x = " +
-                    formatNumber(result.x)
-                ]
-            );
-
+        if (result.type === "quadratic-none") {
 
             addStep(
-                "جواب نهایی",
-
-                [
-                    "x = " +
-                    formatNumber(result.x)
-                ]
+                "جواب",
+                "چون دلتا منفی است، این معادله در مجموعه اعداد حقیقی جواب ندارد.",
+                ""
             );
-
 
             return;
         }
 
+        if (result.type === "quadratic-one") {
+
+            addStep(
+                "مرحله 3: استفاده از فرمول",
+                "چون دلتا صفر است، معادله یک جواب دارد.",
+                "x = " + formatNumber(result.x1)
+            );
+
+            return;
+        }
 
         addStep(
-            "مرحله " +
-            stepNumber +
-            ": استفاده از فرمول درجه دوم",
-
-            [
-                "x = (-b ± √Δ) ÷ 2a",
-
-                "x₁ = " +
-                formatNumber(result.x1),
-
-                "x₂ = " +
-                formatNumber(result.x2)
-            ]
-        );
-
-
-        addStep(
-            "جواب‌های نهایی",
-
-            [
-                "x₁ = " +
-                formatNumber(result.x1),
-
-                "x₂ = " +
-                formatNumber(result.x2)
-            ]
+            "مرحله 3: استفاده از فرمول درجه دوم",
+            "از فرمول حل معادله درجه دوم استفاده می‌کنیم.",
+            "x₁ = " + formatNumber(result.x1) +
+            "<br>x₂ = " + formatNumber(result.x2)
         );
     }
 
 
     // =========================
-    // حل
+    // بررسی جواب
+    // =========================
+
+    function createCheck(data, result) {
+
+        if (
+            result.type !== "linear" &&
+            result.type !== "quadratic-one" &&
+            result.type !== "quadratic-two"
+        ) {
+            checkResult.textContent =
+                "برای این معادله بررسی جواب ممکن نیست.";
+
+            return;
+        }
+
+        const values = [];
+
+        if (result.type === "linear") {
+            values.push(result.x);
+        }
+
+        if (result.type === "quadratic-one") {
+            values.push(result.x1);
+        }
+
+        if (result.type === "quadratic-two") {
+            values.push(result.x1);
+            values.push(result.x2);
+        }
+
+        let text = "";
+
+        values.forEach(function (x, index) {
+
+            const leftValue =
+                data.left.a * x * x +
+                data.left.b * x +
+                data.left.c;
+
+            const rightValue =
+                data.right.a * x * x +
+                data.right.b * x +
+                data.right.c;
+
+            const correct =
+                Math.abs(leftValue - rightValue) < 0.000001;
+
+            if (values.length > 1) {
+                text +=
+                    "جواب " +
+                    (index + 1) +
+                    ": ";
+            }
+
+            text += correct
+                ? "با جایگذاری جواب، دو طرف مساوی برابر می‌شوند؛ پس جواب درست است."
+                : "با جایگذاری جواب، دو طرف مساوی برابر نشدند.";
+
+            if (index < values.length - 1) {
+                text += "\n";
+            }
+        });
+
+        checkResult.textContent = text;
+    }
+
+
+    // =========================
+    // تابع اصلی حل
     // =========================
 
     function solve() {
 
-        const raw =
+        const input =
             equationInput.value.trim();
 
-
-        if (!raw) {
+        if (!input) {
 
             answer.textContent =
-                "اول یک معادله وارد کن.";
-
+                "لطفاً ابتدا یک معادله وارد کن.";
 
             steps.innerHTML =
-                '<p class="empty-message">' +
-                "مثلاً بنویس: 2x + 5 = 17" +
-                "</p>";
-
+                '<p class="empty-message">مثلاً 2x + 5 = 17 را وارد کن.</p>';
 
             checkResult.textContent =
                 "هنوز جوابی برای بررسی وجود ندارد.";
-
 
             return;
         }
 
 
-        try {
+        const data =
+            prepareEquation(input);
 
-            const result =
-                solveEquation(raw);
-
-
-            if (!result.ok) {
-
-                answer.textContent =
-                    "خطا در حل معادله";
-
-
-                steps.innerHTML =
-                    '<p class="empty-message">' +
-                    result.error +
-                    "</p>";
-
-
-                checkResult.textContent =
-                    "جوابی برای بررسی وجود ندارد.";
-
-
-                return;
-            }
-
-
-            // درجه اول
-
-            if (
-                result.type ===
-                "linear"
-            ) {
-
-                answer.textContent =
-                    "x = " +
-                    formatNumber(
-                        result.x
-                    );
-
-
-                showLinearSteps(
-                    result
-                );
-
-
-                checkResult.textContent =
-                    "با جایگذاری x = " +
-                    formatNumber(
-                        result.x
-                    ) +
-                    "، دو طرف مساوی برابر می‌شوند؛ پس جواب درست است.";
-
-
-                return;
-            }
-
-
-            // درجه دوم با یک جواب
-
-            if (
-                result.type ===
-                "quadraticOne"
-            ) {
-
-                answer.textContent =
-                    "x = " +
-                    formatNumber(
-                        result.x
-                    );
-
-
-                showQuadraticSteps(
-                    result
-                );
-
-
-                checkResult.textContent =
-                    "با جایگذاری جواب، دو طرف مساوی برابر می‌شوند؛ پس جواب درست است.";
-
-
-                return;
-            }
-
-
-            // درجه دوم با دو جواب
-
-            if (
-                result.type ===
-                "quadratic"
-            ) {
-
-                answer.textContent =
-                    "x₁ = " +
-                    formatNumber(
-                        result.x1
-                    ) +
-                    " ، x₂ = " +
-                    formatNumber(
-                        result.x2
-                    );
-
-
-                showQuadraticSteps(
-                    result
-                );
-
-
-                checkResult.textContent =
-                    "با جایگذاری هر دو جواب، دو طرف مساوی برابر می‌شوند؛ پس هر دو جواب درست هستند.";
-
-
-                return;
-            }
-
-
-            // بی‌نهایت جواب
-
-            if (
-                result.type ===
-                "infinite"
-            ) {
-
-                answer.textContent =
-                    "بی‌نهایت جواب";
-
-
-                steps.innerHTML = "";
-
-
-                addStep(
-                    "نتیجه",
-
-                    [
-                        "دو طرف معادله برای همه مقدارهای x برابر هستند."
-                    ]
-                );
-
-
-                checkResult.textContent =
-                    "این معادله بی‌نهایت جواب دارد.";
-
-
-                return;
-            }
-
-
-            // بدون جواب
-
-            if (
-                result.type ===
-                "none"
-            ) {
-
-                answer.textContent =
-                    "معادله جواب ندارد";
-
-
-                steps.innerHTML = "";
-
-
-                addStep(
-                    "نتیجه",
-
-                    [
-                        "پس از ساده‌سازی، به یک تناقض می‌رسیم."
-                    ]
-                );
-
-
-                checkResult.textContent =
-                    "این معادله جواب ندارد.";
-
-
-                return;
-            }
-
-
-            // جواب حقیقی ندارد
-
-            if (
-                result.type ===
-                "complex"
-            ) {
-
-                answer.textContent =
-                    "در اعداد حقیقی جواب ندارد";
-
-
-                steps.innerHTML = "";
-
-
-                addStep(
-                    "نتیجه",
-
-                    [
-                        "دلتا منفی است؛ بنابراین جواب حقیقی نداریم."
-                    ]
-                );
-
-
-                checkResult.textContent =
-                    "این معادله در مجموعه اعداد حقیقی جواب ندارد.";
-            }
-
-        }
-
-        catch (error) {
-
-            console.error(error);
-
+        if (!data) {
 
             answer.textContent =
-                "خطا در پردازش معادله";
+                "نتوانستم این معادله را تشخیص بدهم.";
 
-
-            steps.innerHTML =
-                '<p class="empty-message">' +
-                "در پردازش این معادله مشکلی پیش آمد." +
-                "</p>";
-
+            steps.innerHTML = `
+                <p class="empty-message">
+                    فعلاً معادله را به شکل ساده‌ای مثل
+                    2x + 5 = 17
+                    وارد کن.
+                </p>
+            `;
 
             checkResult.textContent =
                 "جوابی برای بررسی وجود ندارد.";
+
+            return;
+        }
+
+
+        const result =
+            solveEquation(data);
+
+        steps.innerHTML = "";
+
+
+        // =========================
+        // بی‌نهایت جواب
+        // =========================
+
+        if (result.type === "infinite") {
+
+            answer.textContent =
+                "این معادله بی‌نهایت جواب دارد.";
+
+            addStep(
+                "نتیجه",
+                "دو طرف معادله یکسان هستند.",
+                "∞"
+            );
+
+            checkResult.textContent =
+                "این معادله بی‌نهایت جواب دارد.";
+
+            return;
+        }
+
+
+        // =========================
+        // بدون جواب
+        // =========================
+
+        if (result.type === "none") {
+
+            answer.textContent =
+                "این معادله جواب ندارد.";
+
+            addStep(
+                "نتیجه",
+                "به یک عبارت نادرست رسیدیم؛ بنابراین معادله جواب ندارد.",
+                "0 ≠ " + formatNumber(result.c)
+            );
+
+            checkResult.textContent =
+                "این معادله جواب ندارد.";
+
+            return;
+        }
+
+
+        // =========================
+        // درجه اول
+        // =========================
+
+        if (result.type === "linear") {
+
+            answer.textContent =
+                "x = " + formatNumber(result.x);
+
+            showLinearSteps(
+                data,
+                result
+            );
+
+            createCheck(
+                data,
+                result
+            );
+
+            return;
+        }
+
+
+        // =========================
+        // درجه دوم بدون جواب حقیقی
+        // =========================
+
+        if (result.type === "quadratic-none") {
+
+            answer.textContent =
+                "این معادله در اعداد حقیقی جواب ندارد.";
+
+            showQuadraticSteps(
+                data,
+                result
+            );
+
+            checkResult.textContent =
+                "جواب حقیقی وجود ندارد.";
+
+            return;
+        }
+
+
+        // =========================
+        // درجه دوم
+        // =========================
+
+        if (
+            result.type === "quadratic-one" ||
+            result.type === "quadratic-two"
+        ) {
+
+            if (result.type === "quadratic-one") {
+
+                answer.textContent =
+                    "x = " +
+                    formatNumber(result.x1);
+
+            } else {
+
+                answer.innerHTML =
+                    "x₁ = " +
+                    formatNumber(result.x1) +
+                    "<br>x₂ = " +
+                    formatNumber(result.x2);
+            }
+
+            showQuadraticSteps(
+                data,
+                result
+            );
+
+            createCheck(
+                data,
+                result
+            );
+
+            return;
         }
     }
 
@@ -1523,16 +1118,14 @@ document.addEventListener("DOMContentLoaded", function () {
 
         equationInput.value = "";
 
-
         answer.textContent =
             "هنوز معادله‌ای حل نشده است.";
 
-
-        steps.innerHTML =
-            '<p class="empty-message">' +
-            "بعد از حل معادله، مراحل اینجا نمایش داده می‌شود." +
-            "</p>";
-
+        steps.innerHTML = `
+            <p class="empty-message">
+                بعد از حل معادله، مراحل اینجا نمایش داده می‌شود.
+            </p>
+        `;
 
         checkResult.textContent =
             "هنوز جوابی برای بررسی وجود ندارد.";
@@ -1540,126 +1133,123 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     // =========================
-    // حالت تایپ
+    // حالت‌های ورود
     // =========================
 
-    textModeButton.addEventListener(
-        "click",
-        function () {
+    function setMode(activeButton) {
 
-            textModeButton.classList.add(
-                "active"
-            );
+        const buttons = [
+            textModeButton,
+            sentenceModeButton,
+            imageModeButton
+        ];
 
-            sentenceModeButton.classList.remove(
-                "active"
-            );
+        buttons.forEach(function (button) {
 
-            imageModeButton.classList.remove(
-                "active"
-            );
+            if (button) {
+                button.classList.remove("active");
+            }
 
+        });
 
-            equationInput.placeholder =
-                "مثلاً: 2x + 5 = 17";
-
-
-            equationInput.focus();
+        if (activeButton) {
+            activeButton.classList.add("active");
         }
-    );
+    }
+
+
+    if (textModeButton) {
+
+        textModeButton.addEventListener(
+            "click",
+            function () {
+
+                setMode(textModeButton);
+
+                equationInput.placeholder =
+                    "مثلاً: 2x + 5 = 17";
+            }
+        );
+    }
+
+
+    if (sentenceModeButton) {
+
+        sentenceModeButton.addEventListener(
+            "click",
+            function () {
+
+                setMode(sentenceModeButton);
+
+                equationInput.placeholder =
+                    "مثلاً: دو برابر یک عدد به علاوه ۵ برابر ۱۷ است";
+            }
+        );
+    }
+
+
+    if (imageModeButton) {
+
+        imageModeButton.addEventListener(
+            "click",
+            function () {
+
+                setMode(imageModeButton);
+
+                equationInput.placeholder =
+                    "قابلیت حل از روی عکس در مرحله بعد اضافه می‌شود.";
+            }
+        );
+    }
 
 
     // =========================
-    // حالت جمله فارسی
+    // دکمه حل
     // =========================
 
-    sentenceModeButton.addEventListener(
-        "click",
-        function () {
+    if (solveButton) {
 
-            sentenceModeButton.classList.add(
-                "active"
-            );
-
-            textModeButton.classList.remove(
-                "active"
-            );
-
-            imageModeButton.classList.remove(
-                "active"
-            );
-
-
-            equationInput.placeholder =
-                "مثلاً: دو برابر یک عدد به اضافه پنج برابر است با هفده";
-
-
-            equationInput.focus();
-        }
-    );
+        solveButton.addEventListener(
+            "click",
+            solve
+        );
+    }
 
 
     // =========================
-    // حالت عکس
+    // دکمه پاک کردن
     // =========================
 
-    imageModeButton.addEventListener(
-        "click",
-        function () {
+    if (clearButton) {
 
-            imageModeButton.classList.add(
-                "active"
-            );
-
-            textModeButton.classList.remove(
-                "active"
-            );
-
-            sentenceModeButton.classList.remove(
-                "active"
-            );
-
-
-            answer.textContent =
-                "📷 قابلیت حل از روی عکس در نسخه بعدی فعال می‌شود.";
-        }
-    );
-
-
-    // =========================
-    // اتصال دکمه‌ها
-    // =========================
-
-    solveButton.addEventListener(
-        "click",
-        solve
-    );
-
-
-    clearButton.addEventListener(
-        "click",
-        clearAll
-    );
+        clearButton.addEventListener(
+            "click",
+            clearAll
+        );
+    }
 
 
     // =========================
     // Enter برای حل
     // =========================
 
-    equationInput.addEventListener(
-        "keydown",
-        function (event) {
+    if (equationInput) {
 
-            if (
-                event.key === "Enter" &&
-                !event.shiftKey
-            ) {
+        equationInput.addEventListener(
+            "keydown",
+            function (event) {
 
-                event.preventDefault();
+                if (
+                    event.key === "Enter" &&
+                    !event.shiftKey
+                ) {
 
-                solve();
+                    event.preventDefault();
+
+                    solve();
+                }
             }
-        }
-    );
+        );
+    }
 
 });
