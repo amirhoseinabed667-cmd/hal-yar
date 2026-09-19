@@ -393,22 +393,168 @@ document.addEventListener("DOMContentLoaded", function () {
 
                 multiplied.push(result);
             }
+function expandParentheses(expression) {
 
+    expression = expression
+        .replace(/\s+/g, "")
+        .replace(/\*/g, "");
 
-            expression =
-                beforeWithoutFactor +
-                multiplied.join("") +
-                after;
-        }
+    let safety = 0;
 
+    while (expression.includes("(")) {
 
-        // پرانتز بسته اضافی
-        if (expression.includes(")")) {
+        safety++;
+
+        if (safety > 50) {
             return null;
         }
 
-        return expression;
+        // آخرین پرانتز باز را پیدا می‌کنیم
+        const openIndex =
+            expression.lastIndexOf("(");
+
+        if (openIndex === -1) {
+            return null;
+        }
+
+        // پرانتز بسته مربوط به آن را پیدا می‌کنیم
+        const closeIndex =
+            expression.indexOf(")", openIndex);
+
+        if (closeIndex === -1) {
+            return null;
+        }
+
+        // محتوای داخل پرانتز
+        const inside =
+            expression.substring(
+                openIndex + 1,
+                closeIndex
+            );
+
+        if (inside === "") {
+            return null;
+        }
+
+        // قسمت قبل از پرانتز
+        const before =
+            expression.substring(
+                0,
+                openIndex
+            );
+
+        // قسمت بعد از پرانتز
+        const after =
+            expression.substring(
+                closeIndex + 1
+            );
+
+        let factor = 1;
+        let beforeWithoutFactor = before;
+
+        // -----------------------------------------
+        // حالت:
+        // 2(x+3)
+        // 3(x-4)
+        // -2(x+3)
+        // -----------------------------------------
+
+        const numberMatch =
+            before.match(/([+-]?\d*\.?\d+)$/);
+
+        if (numberMatch) {
+
+            const factorText =
+                numberMatch[1];
+
+            factor =
+                Number(factorText);
+
+            beforeWithoutFactor =
+                before.substring(
+                    0,
+                    before.length -
+                    factorText.length
+                );
+        }
+
+        // -----------------------------------------
+        // حالت:
+        // -(x+3)
+        // -----------------------------------------
+
+        else if (before.endsWith("-")) {
+
+            factor = -1;
+
+            beforeWithoutFactor =
+                before.substring(
+                    0,
+                    before.length - 1
+                );
+        }
+
+        // -----------------------------------------
+        // حالت:
+        // +(x+3)
+        // -----------------------------------------
+
+        else if (before.endsWith("+")) {
+
+            factor = 1;
+
+            beforeWithoutFactor =
+                before.substring(
+                    0,
+                    before.length - 1
+                );
+        }
+
+        // -----------------------------------------
+        // جدا کردن جمله‌های داخل پرانتز
+        // -----------------------------------------
+
+        const terms =
+            splitTerms(inside);
+
+        if (terms.length === 0) {
+            return null;
+        }
+
+        const multiplied = [];
+
+        for (const term of terms) {
+
+            const result =
+                multiplyTerm(
+                    term,
+                    factor
+                );
+
+            if (result === null) {
+                return null;
+            }
+
+            multiplied.push(result);
+        }
+
+        // -----------------------------------------
+        // جایگزین کردن پرانتز با عبارت بازشده
+        // -----------------------------------------
+
+        expression =
+            beforeWithoutFactor +
+            multiplied.join("") +
+            after;
     }
+
+    // اگر پرانتز بسته‌ای باقی مانده باشد
+    if (expression.includes(")")) {
+        return null;
+    }
+
+    return expression;
+}
 
 
     // =========================================================
