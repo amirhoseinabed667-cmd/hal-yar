@@ -14,7 +14,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /* =========================
-       ابزارهای کمکی
+       تبدیل اعداد فارسی
     ========================= */
 
     function normalizeNumbers(text) {
@@ -23,12 +23,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const arabic = "٠١٢٣٤٥٦٧٨٩";
 
         return text
-            .replace(/[۰-۹]/g, function (d) {
-                return persian.indexOf(d);
-            })
-            .replace(/[٠-٩]/g, function (d) {
-                return arabic.indexOf(d);
-            })
+            .replace(/[۰-۹]/g, d => persian.indexOf(d))
+            .replace(/[٠-٩]/g, d => arabic.indexOf(d))
             .replace(/×/g, "*")
             .replace(/÷/g, "/")
             .replace(/−/g, "-")
@@ -39,7 +35,9 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function numberText(number) {
 
-        if (number === 0) return "0";
+        if (Math.abs(number) < 0.0000001) {
+            return "0";
+        }
 
         if (Number.isInteger(number)) {
             return String(number);
@@ -49,35 +47,63 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
 
-    function formatNumber(number) {
-
-        if (number === 0) return "0";
-
-        if (Number.isInteger(number)) {
-            return String(number);
-        }
-
-        return String(Number(number.toFixed(6)));
-    }
-
+    /* =========================
+       نمایش چندجمله‌ای
+    ========================= */
 
     function polynomialText(poly) {
 
-        const b = poly[1] || 0;
         const c = poly[0] || 0;
+        const b = poly[1] || 0;
+        const a = poly[2] || 0;
 
         let text = "";
 
-        if (b !== 0) {
+        if (a !== 0) {
 
-            if (b === 1) {
-                text += "x";
+            if (a === 1) {
+                text += "x²";
             }
-            else if (b === -1) {
-                text += "-x";
+            else if (a === -1) {
+                text += "-x²";
             }
             else {
-                text += numberText(b) + "x";
+                text += numberText(a) + "x²";
+            }
+        }
+
+        if (b !== 0) {
+
+            if (text !== "") {
+
+                if (b > 0) {
+                    text += " + ";
+                }
+                else {
+                    text += " - ";
+                }
+
+                const absB = Math.abs(b);
+
+                if (absB === 1) {
+                    text += "x";
+                }
+                else {
+                    text += numberText(absB) + "x";
+                }
+
+            }
+            else {
+
+                if (b === 1) {
+                    text += "x";
+                }
+                else if (b === -1) {
+                    text += "-x";
+                }
+                else {
+                    text += numberText(b) + "x";
+                }
             }
         }
 
@@ -127,18 +153,191 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /* =========================
+       آماده‌سازی عبارت
+    ========================= */
+
+    function prepareExpression(expression) {
+
+        expression = expression
+            .replace(/\[/g, "(")
+            .replace(/\]/g, ")")
+            .replace(/\{/g, "(")
+            .replace(/\}/g, ")");
+
+        return expression;
+    }
+
+
+    /* =========================
+       باز کردن پرانتزهای ساده
+    ========================= */
+
+    function expandSimpleParentheses(expression) {
+
+        expression = prepareExpression(expression);
+
+        let changed = true;
+
+        while (changed) {
+
+            changed = false;
+
+            /*
+               الگوی:
+
+               2(x+3)
+               2(x-3)
+               -2(x+3)
+               -2(x-3)
+            */
+
+            const pattern =
+                /([+-]?\d+(?:\.\d+)?)\(([^()]+)\)/;
+
+            const match = expression.match(pattern);
+
+            if (match) {
+
+                const multiplier = Number(match[1]);
+                const inside = match[2];
+
+                const parts = splitTerms(inside);
+
+                let expanded = "";
+
+                parts.forEach(function (term, index) {
+
+                    const value = multiplyTerm(term, multiplier);
+
+                    if (index === 0) {
+                        expanded += value;
+                    }
+                    else if (value.startsWith("-")) {
+                        expanded += value;
+                    }
+                    else {
+                        expanded += "+" + value;
+                    }
+                });
+
+                expression =
+                    expression.replace(match[0], expanded);
+
+                changed = true;
+            }
+        }
+
+        return expression;
+    }
+
+
+    function splitTerms(expression) {
+
+        expression = expression.replace(/-/g, "+-");
+
+        return expression
+            .split("+")
+            .filter(x => x !== "");
+    }
+
+
+    function multiplyTerm(term, multiplier) {
+
+        if (term.includes("x^2")) {
+
+            let coefficient =
+                term.replace("x^2", "");
+
+            if (coefficient === "" || coefficient === "+") {
+                coefficient = 1;
+            }
+            else if (coefficient === "-") {
+                coefficient = -1;
+            }
+            else {
+                coefficient = Number(coefficient);
+            }
+
+            return numberText(coefficient * multiplier) + "x^2";
+        }
+
+
+        if (term.includes("x")) {
+
+            let coefficient =
+                term.replace("x", "");
+
+            if (coefficient === "" || coefficient === "+") {
+                coefficient = 1;
+            }
+            else if (coefficient === "-") {
+                coefficient = -1;
+            }
+            else {
+                coefficient = Number(coefficient);
+            }
+
+            const result = coefficient * multiplier;
+
+            if (result === 1) return "x";
+            if (result === -1) return "-x";
+
+            return numberText(result) + "x";
+        }
+
+
+        return numberText(Number(term) * multiplier);
+    }
+
+
+    /* =========================
+       تشخیص باز شدن پرانتز
+    ========================= */
+
+    function getExpandedEquation(original) {
+
+        const sides = original.split("=");
+
+        if (sides.length !== 2) {
+            return null;
+        }
+
+        const leftExpanded =
+            expandSimpleParentheses(sides[0]);
+
+        const rightExpanded =
+            expandSimpleParentheses(sides[1]);
+
+        const originalClean =
+            sides[0] + "=" + sides[1];
+
+        const expandedClean =
+            leftExpanded + "=" + rightExpanded;
+
+        if (originalClean !== expandedClean) {
+
+            return {
+                left: leftExpanded,
+                right: rightExpanded
+            };
+        }
+
+        return null;
+    }
+
+
+    /* =========================
        تبدیل عبارت به چندجمله‌ای
     ========================= */
 
     function parsePolynomial(expression) {
 
-        expression = expression
-            .replace(/\(/g, "")
-            .replace(/\)/g, "");
+        expression = expandSimpleParentheses(expression);
 
         expression = expression.replace(/-/g, "+-");
 
-        const parts = expression.split("+");
+        const parts =
+            expression.split("+").filter(x => x !== "");
 
         let constant = 0;
         let xCoefficient = 0;
@@ -146,13 +345,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
         for (let part of parts) {
 
-            if (part === "") continue;
-
             if (part.includes("x^2")) {
 
-                let coefficient = part.replace("x^2", "");
+                let coefficient =
+                    part.replace("x^2", "");
 
-                if (coefficient === "" || coefficient === "+") {
+                if (coefficient === "") {
                     coefficient = 1;
                 }
                 else if (coefficient === "-") {
@@ -167,9 +365,10 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             else if (part.includes("x")) {
 
-                let coefficient = part.replace("x", "");
+                let coefficient =
+                    part.replace("x", "");
 
-                if (coefficient === "" || coefficient === "+") {
+                if (coefficient === "") {
                     coefficient = 1;
                 }
                 else if (coefficient === "-") {
@@ -197,7 +396,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /* =========================
-       انتقال همه چیز به یک طرف
+       تفریق دو چندجمله‌ای
     ========================= */
 
     function subtractPolynomials(left, right) {
@@ -219,32 +418,37 @@ document.addEventListener("DOMContentLoaded", function () {
         equation = normalizeNumbers(equation);
 
         if (!equation.includes("=")) {
-            throw new Error("معادله باید علامت مساوی (=) داشته باشد.");
+            throw new Error(
+                "معادله باید علامت مساوی (=) داشته باشد."
+            );
         }
 
         const sides = equation.split("=");
 
         if (sides.length !== 2) {
-            throw new Error("معادله واردشده صحیح نیست.");
+            throw new Error(
+                "معادله واردشده صحیح نیست."
+            );
         }
 
         const left = parsePolynomial(sides[0]);
         const right = parsePolynomial(sides[1]);
 
-        const result = subtractPolynomials(left, right);
+        const result =
+            subtractPolynomials(left, right);
 
         const c = result[0];
         const b = result[1];
         const a = result[2];
 
 
-        /* درجه دوم */
-
         if (a !== 0) {
 
-            const delta = b * b - 4 * a * c;
+            const delta =
+                b * b - 4 * a * c;
 
             if (delta < 0) {
+
                 return {
                     type: "quadratic-no-real",
                     left,
@@ -258,7 +462,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (delta === 0) {
 
-                const x = -b / (2 * a);
+                const x =
+                    -b / (2 * a);
 
                 return {
                     type: "quadratic-one",
@@ -272,8 +477,13 @@ document.addEventListener("DOMContentLoaded", function () {
                 };
             }
 
-            const x1 = (-b + Math.sqrt(delta)) / (2 * a);
-            const x2 = (-b - Math.sqrt(delta)) / (2 * a);
+            const x1 =
+                (-b + Math.sqrt(delta)) /
+                (2 * a);
+
+            const x2 =
+                (-b - Math.sqrt(delta)) /
+                (2 * a);
 
             return {
                 type: "quadratic-two",
@@ -289,8 +499,6 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
 
-        /* معادله درجه اول */
-
         if (b === 0 && c === 0) {
 
             return {
@@ -302,6 +510,7 @@ document.addEventListener("DOMContentLoaded", function () {
             };
         }
 
+
         if (b === 0 && c !== 0) {
 
             return {
@@ -312,6 +521,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 c
             };
         }
+
 
         const x = -c / b;
 
@@ -327,10 +537,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
     /* =========================
-       نمایش مراحل معادله درجه اول
+       مراحل معادله درجه اول
     ========================= */
 
-    function createLinearSteps(result) {
+    function createLinearSteps(result, expandedInfo) {
 
         const left = result.left;
         const right = result.right;
@@ -340,28 +550,68 @@ document.addEventListener("DOMContentLoaded", function () {
 
         let html = "";
 
-        /* معادله اولیه */
+        let stage = 1;
+
+
+        /*
+           مرحله باز کردن پرانتز
+        */
+
+        if (expandedInfo) {
+
+            html +=
+                "<div class='step-title'>" +
+                "مرحله " + stage + ": باز کردن پرانتز" +
+                "</div>";
+
+            html +=
+                "<div dir='ltr' class='step-line'>" +
+                expandedInfo.original +
+                "</div>";
+
+            html +=
+                "<div class='step-explanation'>" +
+                expandedInfo.explanation +
+                "</div>";
+
+            html +=
+                "<div dir='ltr' class='step-line'>" +
+                expandedInfo.expanded +
+                "</div>";
+
+            stage++;
+        }
+
+
+        /*
+           معادله اولیه / ساده‌شده
+        */
 
         html +=
-            "<div class='step-title'>مرحله ۱: معادله اولیه</div>";
+            "<div class='step-title'>" +
+            "مرحله " + stage + ": معادله " +
+            (expandedInfo ? "ساده‌شده" : "اولیه") +
+            "</div>";
 
         html +=
             "<div dir='ltr' class='step-line'>" +
             equationText(left, right) +
             "</div>";
 
+        stage++;
+
 
         /*
-           اگر سمت چپ یک عدد ثابت دارد،
-           آن عدد را به طرف دیگر می‌بریم.
+           انتقال ثابت
         */
 
-        const leftConstant = left[0] || 0;
-
+        const leftConstant =
+            left[0] || 0;
 
         if (leftConstant !== 0) {
 
-            const amount = Math.abs(leftConstant);
+            const amount =
+                Math.abs(leftConstant);
 
             if (leftConstant > 0) {
 
@@ -381,63 +631,45 @@ document.addEventListener("DOMContentLoaded", function () {
                     numberText(amount) +
                     " را به طرف دیگر مساوی می‌بریم؛ چون منفی است، علامتش مثبت می‌شود." +
                     "</div>";
-
             }
 
 
-            /* عبارت سمت چپ بعد از حذف ثابت */
+            const rightConstant =
+                right[0] || 0;
 
-            const leftX = xTerm(b);
-
-            let rightNewConstant;
+            let newRight;
 
             if (leftConstant > 0) {
-                rightNewConstant = (right[0] || 0) - leftConstant;
+                newRight =
+                    rightConstant - amount;
             }
             else {
-                rightNewConstant = (right[0] || 0) + amount;
-            }
-
-
-            let rightText = "";
-
-            if (rightNewConstant === 0) {
-                rightText = "0";
-            }
-            else {
-                rightText = numberText(rightNewConstant);
+                newRight =
+                    rightConstant + amount;
             }
 
 
             html +=
-    "<div dir='ltr' class='step-line'>" +
-    leftX +
-    " = " +
-    numberText(right[0] || 0) +
-    (leftConstant > 0 ? " - " : " + ") +
-    numberText(amount) +
-    "</div>";
+                "<div dir='ltr' class='step-line'>" +
+                xTerm(b) +
+                " = " +
+                numberText(rightConstant) +
+                (leftConstant > 0
+                    ? " - "
+                    : " + ") +
+                numberText(amount) +
+                "</div>";
 
 
-html +=
-    "<div dir='ltr' class='step-line'>" +
-    leftX +
-    " = " +
-    rightText +
-    "</div>";
+            html +=
+                "<div dir='ltr' class='step-line'>" +
+                xTerm(b) +
+                " = " +
+                numberText(newRight) +
+                "</div>";
 
         }
         else {
-
-            /*
-               اگر ثابت سمت چپ صفر باشد،
-               مستقیماً به مرحله ضریب x می‌رویم.
-            */
-
-            html +=
-                "<div class='step-explanation'>" +
-                "در این مرحله عدد ثابتی کنار x وجود ندارد، پس مستقیماً ضریب x را ساده می‌کنیم." +
-                "</div>";
 
             html +=
                 "<div dir='ltr' class='step-line'>" +
@@ -448,18 +680,25 @@ html +=
         }
 
 
-        /* =========================
+        /*
            تقسیم بر ضریب x
-        ========================= */
+        */
 
         if (b !== 1) {
 
             html +=
                 "<div class='step-explanation'>" +
-                "حالا برای اینکه فقط x باقی بماند، دو طرف مساوی را بر " +
+                "حالا برای اینکه ضریب " +
+                numberText(Math.abs(b)) +
+                " کنار x حذف شود و فقط x باقی بماند، " +
+                "دو طرف مساوی را بر " +
                 numberText(b) +
                 " تقسیم می‌کنیم." +
                 "</div>";
+
+
+            const rightValue =
+                result.x * b;
 
             html +=
                 "<div dir='ltr' class='step-line'>" +
@@ -467,14 +706,12 @@ html +=
                 " ÷ " +
                 numberText(b) +
                 " = " +
-                numberText(result.x * b) +
+                numberText(rightValue) +
                 " ÷ " +
                 numberText(b) +
                 "</div>";
         }
 
-
-        /* جواب نهایی */
 
         html +=
             "<div class='step-title'>جواب نهایی</div>";
@@ -486,6 +723,52 @@ html +=
             "</div>";
 
         return html;
+    }
+
+
+    /* =========================
+       ساخت مرحله پرانتز
+    ========================= */
+
+    function createExpansionInfo(equation) {
+
+        const sides =
+            equation.split("=");
+
+        const leftOriginal =
+            sides[0];
+
+        const rightOriginal =
+            sides[1];
+
+        const leftExpanded =
+            expandSimpleParentheses(leftOriginal);
+
+        const rightExpanded =
+            expandSimpleParentheses(rightOriginal);
+
+
+        if (
+            leftOriginal === leftExpanded &&
+            rightOriginal === rightExpanded
+        ) {
+            return null;
+        }
+
+
+        let explanation =
+            "عدد بیرون پرانتز را در تمام عبارت داخل پرانتز ضرب می‌کنیم.";
+
+
+        return {
+            original:
+                leftOriginal + " = " + rightOriginal,
+
+            expanded:
+                leftExpanded + " = " + rightExpanded,
+
+            explanation
+        };
     }
 
 
@@ -602,20 +885,22 @@ html +=
             return (
                 "با قرار دادن x = " +
                 numberText(result.x) +
-                " در معادله، دو طرف مساوی برابر " +
+                " در معادله، دو طرف برابر " +
                 numberText(leftValue) +
                 " می‌شوند. ✅"
             );
         }
+
 
         if (result.type === "quadratic-one") {
 
             return (
                 "جواب x = " +
                 numberText(result.x) +
-                " در معادله قابل جایگذاری و بررسی است. ✅"
+                " قابل بررسی است. ✅"
             );
         }
+
 
         if (result.type === "quadratic-two") {
 
@@ -628,6 +913,7 @@ html +=
             );
         }
 
+
         return "برای این نوع معادله بررسی جداگانه لازم است.";
     }
 
@@ -638,7 +924,8 @@ html +=
 
     solveButton.addEventListener("click", function () {
 
-        const equation = input.value.trim();
+        const equation =
+            input.value.trim();
 
         if (!equation) {
 
@@ -646,7 +933,9 @@ html +=
                 "لطفاً ابتدا یک معادله وارد کن.";
 
             steps.innerHTML =
-                "<p class='empty-message'>معادله‌ای وارد نشده است.</p>";
+                "<p class='empty-message'>" +
+                "معادله‌ای وارد نشده است." +
+                "</p>";
 
             checkResult.textContent =
                 "هنوز جوابی برای بررسی وجود ندارد.";
@@ -657,10 +946,15 @@ html +=
 
         try {
 
-            const result = solveEquation(equation);
+            const normalized =
+                normalizeNumbers(equation);
 
+            const expandedInfo =
+                createExpansionInfo(normalized);
 
-            /* معادله درجه اول */
+            const result =
+                solveEquation(normalized);
+
 
             if (result.type === "linear") {
 
@@ -670,7 +964,10 @@ html +=
                     "</strong>";
 
                 steps.innerHTML =
-                    createLinearSteps(result);
+                    createLinearSteps(
+                        result,
+                        expandedInfo
+                    );
 
                 checkResult.innerHTML =
                     createCheck(result);
@@ -678,8 +975,6 @@ html +=
                 return;
             }
 
-
-            /* بی‌نهایت جواب */
 
             if (result.type === "infinite") {
 
@@ -698,8 +993,6 @@ html +=
             }
 
 
-            /* بدون جواب */
-
             if (result.type === "none") {
 
                 answer.innerHTML =
@@ -707,7 +1000,7 @@ html +=
 
                 steps.innerHTML =
                     "<div class='step-explanation'>" +
-                    "پس از ساده‌سازی به یک تساوی نادرست می‌رسیم؛ بنابراین این معادله جواب ندارد." +
+                    "این معادله جواب ندارد." +
                     "</div>";
 
                 checkResult.textContent =
@@ -716,8 +1009,6 @@ html +=
                 return;
             }
 
-
-            /* درجه دوم */
 
             if (
                 result.type === "quadratic-one" ||
@@ -750,6 +1041,7 @@ html +=
                         "<strong>جواب حقیقی ندارد.</strong>";
                 }
 
+
                 steps.innerHTML =
                     createQuadraticSteps(result);
 
@@ -758,7 +1050,6 @@ html +=
 
                 return;
             }
-
 
         }
         catch (error) {
@@ -802,7 +1093,7 @@ html +=
 
 
     /* =========================
-       حالت‌های ورود
+       روش‌های ورود
     ========================= */
 
     textModeButton.addEventListener("click", function () {
