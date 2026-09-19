@@ -192,13 +192,23 @@ document.addEventListener("DOMContentLoaded", function () {
             */
 
             const pattern =
-                /([+-]?\d+(?:\.\d+)?)\(([^()]+)\)/;
+    /([+-]?\d*(?:\.\d+)?)\(([^()]+)\)/;
 
             const match = expression.match(pattern);
 
             if (match) {
 
-                const multiplier = Number(match[1]);
+                let multiplier = match[1];
+
+if (multiplier === "" || multiplier === "+") {
+    multiplier = 1;
+}
+else if (multiplier === "-") {
+    multiplier = -1;
+}
+else {
+    multiplier = Number(multiplier);
+}
                 const inside = match[2];
 
                 const parts = splitTerms(inside);
