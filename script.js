@@ -233,7 +233,9 @@ else {
                         expanded += "+" + value;
                     }
                 });
-
+if (hasLeadingPlus && !expanded.startsWith("-")) {
+    expanded = "+" + expanded;
+}
                 expression =
     expression.substring(0, match.index) +
     expanded +
