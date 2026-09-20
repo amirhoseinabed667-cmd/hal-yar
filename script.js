@@ -231,7 +231,9 @@ else {
                 });
 
                 expression =
-                    expression.replace(match[0], expanded);
+    expression.substring(0, match.index) +
+    expanded +
+    expression.substring(match.index + match[0].length);
 
                 changed = true;
             }
