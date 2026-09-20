@@ -198,16 +198,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (match) {
 
-                let multiplier = match[1];
+                let multiplierText = match[1];
 
-if (multiplier === "" || multiplier === "+") {
+let multiplier;
+
+if (multiplierText === "" || multiplierText === "+") {
     multiplier = 1;
 }
-else if (multiplier === "-") {
+else if (multiplierText === "-") {
     multiplier = -1;
 }
 else {
-    multiplier = Number(multiplier);
+    multiplier = Number(multiplierText);
 }
                 const inside = match[2];
 
