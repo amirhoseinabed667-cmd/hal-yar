@@ -211,6 +211,8 @@ else if (multiplierText === "-") {
 else {
     multiplier = Number(multiplierText);
 }
+                const hasLeadingPlus =
+    multiplierText.startsWith("+");
                 const inside = match[2];
 
                 const parts = splitTerms(inside);
