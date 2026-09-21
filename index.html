@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#315B4D">
+  <title>حل‌یار</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="app-title">🧮 حل‌یار</div>
+    <div class="app-subtitle">دستیار حل معادلات ریاضی</div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>معادله‌ات را وارد کن</h2>
+      <p class="description">معادله را به صورت ریاضی یا ساده تایپ کن.</p>
+
+      <textarea id="equationInput"
+        placeholder="مثلاً: 2x + 5 = 17"
+        autocomplete="off" spellcheck="false"></textarea>
+
+      <div class="main-buttons">
+        <button id="solveButton" class="primary-button">🧮 حل کن</button>
+        <button id="clearButton" class="secondary-button">پاک کردن</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>روش ورود</h2>
+      <div class="input-methods">
+        <button id="textModeButton" class="method-button active">⌨️ تایپ</button>
+        <button id="sentenceModeButton" class="method-button">🗣️ جمله فارسی</button>
+        <button id="imageModeButton" class="method-button">📷 عکس</button>
+      </div>
+    </section>
+
+    <section id="resultSection" class="card result-card">
+      <h2>جواب</h2>
+      <div id="answer" class="answer">هنوز معادله‌ای حل نشده است.</div>
+    </section>
+
+    <section id="stepsSection" class="card">
+      <h2>مراحل حل</h2>
+      <div id="steps" class="steps">
+        <p class="empty-message">بعد از حل معادله، مراحل اینجا نمایش داده می‌شود.</p>
+      </div>
+    </section>
+
+    <section id="checkSection" class="card">
+      <h2>بررسی جواب</h2>
+      <div id="checkResult" class="check-result">
+        هنوز جوابی برای بررسی وجود ندارد.
+      </div>
+    </section>
+
+    <section class="card features-card">
+      <h2>امکانات حل‌یار</h2>
+      <div class="feature-grid">
+        <div class="feature-item"><span>🧮</span><p>حل معادله</p></div>
+        <div class="feature-item"><span>📝</span><p>مراحل حل</p></div>
+        <div class="feature-item"><span>🗣️</span><p>جمله فارسی</p></div>
+        <div class="feature-item"><span>📷</span><p>حل از روی عکس</p></div>
+        <div class="feature-item"><span>📚</span><p>آموزش</p></div>
+        <div class="feature-item"><span>📜</span><p>تاریخچه</p></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    <p>حل‌یار — حل کن، یاد بگیر</p>
+  </footer>
+
+<script>
+if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function() {
+        navigator.serviceWorker.register("./sw.js");
+    });
+}
+</script>
+
+  <script src="script.js"></script>
+</body>
+</html>
