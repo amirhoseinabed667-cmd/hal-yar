@@ -1,4 +1,4 @@
-const CACHE_NAME = "hal-yar-v19";
+const CACHE_NAME = "hal-yar-v20";
 
 const FILES_TO_CACHE = [
     "./",
