@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", function () {
             .replace(/÷/g, "/")
             .replace(/−/g, "-")
             .replace(/²/g, "^2")
+            .replace(/³/g, "^3")
             .replace(/\s+/g, "");
     }
 
